@@ -3,67 +3,69 @@
 // Distance sensor pins
 #define trigPin 4
 #define echoPin 3
+
 // Stepper pins
 #define stepperIN1Pin 8
 #define stepperIN2Pin 9
 #define stepperIN3Pin 10
 #define stepperIN4Pin 11
+
 // Configuration button pin
 #define buttonPin 2
 
-// Defines the number of steps per rotation
+// Defines the number of steps per revolution
 const int stepsPerRevolution = 2038;
 
+// Max and min distance from distance sensor documentation in centimeters
+float minDistance = 2;
+float maxDistance = 200;
+
 // Information about rotation
-const int max_position = 400;
-const int single_step = 10;
+const int maxPosition = 400;
+const int singleStep = 10;
 
 // Pins entered in sequence IN1-IN3-IN2-IN4 for proper step sequence
 Stepper myStepper = Stepper(stepsPerRevolution, stepperIN1Pin, stepperIN3Pin, stepperIN2Pin, stepperIN4Pin);
 
-int current_position = 0;
-bool positive_direction = true;
+int currentPosition = 0;
+bool positiveDirection = true;
 
 // User control variables
-String input_data = "";
+String inputData = "";
 bool run = true;
-bool config_mode = true;
+bool configMode = true;
 
-// Max and min distance from distance sensor documentation in centimeters
-float min_distance = 2;
-float max_distance = 200;
-
-void setup() 
+void setup()
 {
-  // Stepper Library sets pins as outputs
-	myStepper.setSpeed(5);
+  myStepper.setSpeed(5);  // Stepper Library sets pins as outputs
 
-	Serial.begin(9600);
-	pinMode(trigPin, OUTPUT); 
+  Serial.begin(9600);
+  pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(buttonPin, INPUT_PULLUP);
 }
 
-void loop() 
+void loop()
 {
-  read_serial_input();
-  read_config_button();
+  readSerialInput();
+  readConfigButton();
 
   if (run)
   {
-    if (!config_mode)
+    if (!configMode)
     {
-      bool valid_distance = true;
-      float distance = calculate_distance();
+      bool validDistance = true;
+      float distance = calculateDistance();
+
       // Check if sensor really allow to measure such distance
-      if (distance < min_distance || distance > max_distance)
+      if (distance < minDistance || distance > maxDistance)
       {
-        valid_distance = false;
+        validDistance = false;
       }
 
-      if (valid_distance)
+      if (validDistance)
       {
-        float angle = (static_cast<float>(current_position) / stepsPerRevolution) * 2 * M_PI;
+        float angle = (static_cast<float>(currentPosition) / stepsPerRevolution) * 2 * M_PI;
         float x = distance * sin(angle);
         float y = distance * cos(angle);
 
@@ -72,13 +74,13 @@ void loop()
         Serial.println(y);
       }
     }
-    
-    move_stepper();
+
+    moveStepper();
     delay(10);
   }
 }
 
-float calculate_distance()
+float calculateDistance()
 {
   long time;
   float distance;
@@ -89,94 +91,92 @@ float calculate_distance()
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
+
+  // Get distance
   time = pulseIn(echoPin, HIGH);
-  // Convert
   float time_float = time;
   distance = time_float / 58;
 
   return distance;
 }
 
-void move_stepper()
+void moveStepper()
 {
-  if (positive_direction)
+  if (positiveDirection)
   {
-    if (current_position <= max_position - single_step)
+    if (currentPosition <= maxPosition - singleStep)
     {
-      myStepper.step(single_step);
-	    current_position = current_position + single_step;
+      myStepper.step(singleStep);
+      currentPosition = currentPosition + singleStep;
     }
     else
     {
-      positive_direction = false;
-      // Delay before direction change
-      delay(100);
+      positiveDirection = false;
+      delay(100);  // Delay before direction change
     }
   }
-  else if (!positive_direction)
+  else if (!positiveDirection)
   {
-    if (current_position >= -max_position + single_step)
+    if (currentPosition >= -maxPosition + singleStep)
     {
-      myStepper.step(-single_step);
-      current_position = current_position - single_step;
+      myStepper.step(-singleStep);
+      currentPosition = currentPosition - singleStep;
     }
     else
     {
-      positive_direction = true;
-      // Delay before direction change
-      delay(100);
+      positiveDirection = true;
+      delay(100);  // Delay before direction change
     }
   }
 }
 
-void read_serial_input()
+void readSerialInput()
 {
- if (Serial.available() > 0)
- {
-  input_data = Serial.readStringUntil('\n');
+  if (Serial.available() > 0)
+  {
+    inputData = Serial.readStringUntil('\n');
 
-  if (input_data == "start" || input_data == "Start")
-  {
-    run = true;
+    if (inputData == "start" || inputData == "Start")
+    {
+      run = true;
+    }
+    else if (inputData == "stop" || inputData == "Stop")
+    {
+      run = false;
+    }
+    else if (inputData.startsWith("rotate") || inputData.startsWith("Rotate") && !run)
+    {
+      int angle = inputData.substring(6).toInt();
+      myStepper.step(angle);
+    }
+    else if (inputData == "reset" || inputData == "Reset" && !run)
+    {
+      reset();
+    }
+    else
+    {
+      Serial.println("Invalid command!");
+    }
   }
-  else if (input_data == "stop" || input_data == "Stop")
-  {
-    run = false;
-  }
-  else if (input_data.startsWith("rotate") || input_data.startsWith("Rotate")
-           && !run)
-  {
-    int angle = input_data.substring(6).toInt();
-    myStepper.step(angle);
-  }
-  else if (input_data == "reset" || input_data == "Reset" && !run)
-  {
-    reset();
-  }
-  else
-  {
-    Serial.println("Invalid command!");
-  }
- }
 }
 
 void reset()
 {
-  current_position = 0;
-  positive_direction = true;
+  currentPosition = 0;
+  positiveDirection = true;
 }
 
-void read_config_button()
+void readConfigButton()
 {
-  if (config_mode && digitalRead(buttonPin) == LOW)
+  if (configMode && digitalRead(buttonPin) == LOW)
   {
-    config_mode = false;
+    configMode = false;
     reset();
     delay(2000);
   }
-  else if (!config_mode && digitalRead(buttonPin) == LOW)
+  else if (!configMode && digitalRead(buttonPin) == LOW)
   {
-    config_mode = true;
+    configMode = true;
     reset();
     delay(1000);
   }
