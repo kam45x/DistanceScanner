@@ -37,7 +37,7 @@ Where:
 * **--max_data_points**: An optional argument to set the maximum number of data points to display on the plot, with a default of 160.
 3. Now program is in the config mode. Press the push button when the sensor is at the point where you want the center of the scan to be. It starts plotting (leaves config mode).
 4. You can now control the program by sending commands through the Serial Monitor:
-* _reset_: Resets the center of rotation.
-* _stop_: Stops the motion of the stepper motor.
-* _start_: Starts the motion of the stepper motor.
-* _rotate {steps}_: Manually moves the stepper motor by the specified number of steps.
+* **_reset_**: Resets the center of rotation.
+* **_stop_**: Stops the motion of the stepper motor.
+* **_start_**: Starts the motion of the stepper motor.
+* **_rotate {steps}_**: Manually moves the stepper motor by the specified number of steps.
